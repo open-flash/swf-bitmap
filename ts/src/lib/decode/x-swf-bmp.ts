@@ -8,13 +8,13 @@ const RGBA_SIZE: UintSize = 4;
 
 export function decodeXSwfBmpSync(bytes: Uint8Array): SwfBitmap {
   const stream: ReadableByteStream = new ReadableStream(bytes);
-  const formatId: Uint8 = stream.readUint8();
-  if (formatId !== 3) {
-    throw new Error(`UnsupportedXSwfBmpFormatId: ${formatId}`);
+  const formatCode: Uint8 = stream.readUint8();
+  if (formatCode !== 3) {
+    throw new Error(`UnsupportedXSwfBmpFormatCode: ${formatCode}`);
   }
   const width: UintSize = stream.readUint16LE();
   const height: UintSize = stream.readUint16LE();
-  const paddedWidth: UintSize = width + ((4 - (width % 4)) % 4);
+  const srcStride: UintSize = width + ((4 - (width % 4)) % 4);
   const colorCount: UintSize = stream.readUint8() + 1;
   const colors: Uint32[] = [];
   const compressedData: Uint8Array = stream.tailBytes();
@@ -30,7 +30,7 @@ export function decodeXSwfBmpSync(bytes: Uint8Array): SwfBitmap {
   }
   for (let y: UintSize = 0; y < height; y++) {
     for (let x: UintSize = 0; x < width; x++) {
-      const ci: Uint8 = srcData[colorTableSize + y * paddedWidth + x];
+      const ci: Uint8 = srcData[colorTableSize + y * srcStride + x];
       // TODO: Check how to handle out-of-bounds color indexes (currently we default to opaque black)
       const c: Uint32 = ci < colors.length ? colors[ci] : 0x000000ff;
       dataView.setUint32(RGBA_SIZE * (y * width + x), c, false);

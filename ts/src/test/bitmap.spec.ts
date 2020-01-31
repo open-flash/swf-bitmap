@@ -15,17 +15,20 @@ const JSON_READER: JsonReader = new JsonReader();
 
 describe("bitmap", function () {
   it("x-swf-bmp", async function () {
-    const expectedPam: Uint8Array = fs.readFileSync(
-      sysPath.join(TEST_SAMPLES_ROOT, "homestuck-beta-3.pam"),
-      {encoding: null},
-    );
     const inputJson: string = fs.readFileSync(
-      sysPath.join(TEST_SAMPLES_ROOT, "homestuck-beta-3.ast.json"),
+      sysPath.join(TEST_SAMPLES_ROOT, "homestuck-beta-3", "tag.json"),
       {encoding: "UTF-8"},
     );
     const bitmapTag: DefineBitmap = $DefineBitmap.read(JSON_READER, inputJson);
     const image: SwfBitmap = decodeXSwfBmpSync(bitmapTag.data);
+
     const actualPam: Uint8Array = encodePam(image);
+    fs.writeFileSync(sysPath.join(TEST_SAMPLES_ROOT, "homestuck-beta-3", "local-actual.ts.pam"), actualPam);
+
+    const expectedPam: Uint8Array = fs.readFileSync(
+      sysPath.join(TEST_SAMPLES_ROOT, "homestuck-beta-3", "expected.pam"),
+      {encoding: null},
+    );
 
     try {
       chai.assert.deepEqual(actualPam, expectedPam);
@@ -33,6 +36,5 @@ describe("bitmap", function () {
       chai.assert.strictEqual(prettyPrintBytes(actualPam), prettyPrintBytes(expectedPam));
       throw err;
     }
-
   });
 });

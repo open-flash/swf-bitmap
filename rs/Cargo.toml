@@ -19,6 +19,8 @@ name = "swf_bitmap"
 path = "src/lib.rs"
 
 [dependencies]
+inflate = "^0.4.5"
+nom = "^5.1.0"
 swf-types = "^0.10.0"
 
 [dev-dependencies]
