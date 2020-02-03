@@ -40,7 +40,7 @@ mod tests {
     let tag_bytes: Vec<u8> = ::std::fs::read(path.join("tag.json")).expect("Failed to read tag file");
     let tag = serde_json_v8::from_slice::<DefineBitmap>(&tag_bytes).expect("Failed to read tag");
 
-    let (_, bitmap) = decode_x_swf_bmp(&tag.data).expect("Failed to decode bitmap");
+    let bitmap = decode_x_swf_bmp(&tag.data).expect("Failed to decode bitmap");
 
     let mut actual_pam: Vec<u8> = Vec::new();
     encode_pam(&mut actual_pam, bitmap).expect("Failed to encode PAM");
