@@ -1,0 +1,3 @@
+[submodule "tests/bitmap"]
+	path = tests/bitmap
+	url = https://github.com/open-flash-db/bitmap.git

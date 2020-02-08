@@ -21,9 +21,10 @@ path = "src/lib.rs"
 [dependencies]
 inflate = "^0.4.5"
 nom = "^5.1.0"
-swf-types = "^0.10.0"
+swf-types = "^0.11.0"
 
 [dev-dependencies]
+image = "^0.22.5"
 serde = "^1.0.102"
 serde_json_v8 = "^0.0.1"
 test-generator = "^0.3.0"

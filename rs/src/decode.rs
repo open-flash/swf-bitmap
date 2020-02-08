@@ -45,21 +45,16 @@ pub fn decode_x_swf_bmp(input: &[u8]) -> Result<SwfBitmap, DecodeError> {
         Err(_) => return Err(DecodeError::Invalid),
       };
       match inflate_bytes_zlib(&input) {
-        Ok(data) => decode_color_map(
-          &data,
-          header.width.into(),
-          header.height.into(),
-          usize::from(color_count) + 1,
-        ),
+        Ok(data) => decode_color_map(&data, header.width, header.height, usize::from(color_count) + 1),
         Err(_) => Err(DecodeError::Invalid),
       }
     }
     0x04 => match inflate_bytes_zlib(&input) {
-      Ok(data) => decode_pix_map15(&data, header.width.into(), header.height.into()),
+      Ok(data) => decode_pix_map15(&data, header.width, header.height),
       Err(_) => Err(DecodeError::Invalid),
     },
     0x05 => match inflate_bytes_zlib(&input) {
-      Ok(data) => decode_pix_map24(&data, header.width.into(), header.height.into()),
+      Ok(data) => decode_pix_map24(&data, header.width, header.height),
       Err(_) => Err(DecodeError::Invalid),
     },
     _ => Err(DecodeError::Invalid),
@@ -79,23 +74,24 @@ fn parse_lossless_header(input: &[u8]) -> NomResult<&[u8], LosslessHeader> {
   Ok((input, LosslessHeader { code, width, height }))
 }
 
-fn decode_color_map(input: &[u8], width: usize, height: usize, color_count: usize) -> Result<SwfBitmap, DecodeError> {
+fn decode_color_map(input: &[u8], width: u16, height: u16, color_count: usize) -> Result<SwfBitmap, DecodeError> {
   use nom::multi::count;
   let (input, colors) = match count(parse_rgb, color_count)(&input) {
     Ok(ok) => ok,
     Err(_) => return Err(DecodeError::Invalid),
   };
 
-  let input_stride = int_ceil(width * size_of::<u8>(), ROW_ALIGNMENT);
-  if input.len() < input_stride * height {
+  const INPUT_PIXEL_SIZE: usize = size_of::<u8>();
+  let input_stride = int_ceil(usize::from(width) * INPUT_PIXEL_SIZE, ROW_ALIGNMENT);
+  if input.len() < input_stride * usize::from(height) {
     return Err(DecodeError::Invalid);
   }
 
-  let stride: usize = width * RGBA_SIZE;
-  let mut data: Vec<u8> = Vec::with_capacity(stride * height);
-  for y in 0..height {
-    for x in 0..width {
-      let offset = input_stride * y + x;
+  let stride: usize = usize::from(width) * RGBA_SIZE;
+  let mut data: Vec<u8> = Vec::with_capacity(stride * usize::from(height));
+  for y in 0..usize::from(height) {
+    for x in 0..usize::from(width) {
+      let offset = input_stride * y + INPUT_PIXEL_SIZE * x;
       let color_index: usize = input[offset].into();
       // TODO: Check how to handle out-of-bounds color indexes
       match colors.get(color_index) {
@@ -105,28 +101,37 @@ fn decode_color_map(input: &[u8], width: usize, height: usize, color_count: usiz
     }
   }
   Ok(SwfBitmap {
-    meta: SwfBitmapMeta { width, height, stride },
+    meta: SwfBitmapMeta {
+      width: width.into(),
+      height: height.into(),
+      stride,
+    },
     data,
   })
 }
 
-fn decode_pix_map15(input: &[u8], width: usize, height: usize) -> Result<SwfBitmap, DecodeError> {
-  let input_stride = int_ceil(width * size_of::<u16>(), ROW_ALIGNMENT);
-  if input.len() < input_stride * height {
+fn decode_pix_map15(input: &[u8], width: u16, height: u16) -> Result<SwfBitmap, DecodeError> {
+  const INPUT_PIXEL_SIZE: usize = size_of::<u16>();
+  let input_stride = int_ceil(usize::from(width) * INPUT_PIXEL_SIZE, ROW_ALIGNMENT);
+  if input.len() < input_stride * usize::from(height) {
     return Err(DecodeError::Invalid);
   }
-  let stride: usize = width * RGBA_SIZE;
-  let mut data: Vec<u8> = Vec::with_capacity(stride * height);
-  for y in 0..height {
-    for x in 0..width {
-      let offset = input_stride * y + x;
+  let stride: usize = usize::from(width) * RGBA_SIZE;
+  let mut data: Vec<u8> = Vec::with_capacity(stride * usize::from(height));
+  for y in 0..usize::from(height) {
+    for x in 0..usize::from(width) {
+      let offset = input_stride * y + INPUT_PIXEL_SIZE * x;
       let pix15: u16 = (u16::from(input[offset]) << 8) + u16::from(input[offset + 1]);
       let c = decode_pix15(pix15);
       data.extend_from_slice(&[c.r, c.g, c.b, 0xff]);
     }
   }
   Ok(SwfBitmap {
-    meta: SwfBitmapMeta { width, height, stride },
+    meta: SwfBitmapMeta {
+      width: width.into(),
+      height: height.into(),
+      stride,
+    },
     data,
   })
 }
@@ -142,16 +147,17 @@ fn decode_pix15(pixel: u16) -> Rgb {
   Rgb { r, g, b }
 }
 
-fn decode_pix_map24(input: &[u8], width: usize, height: usize) -> Result<SwfBitmap, DecodeError> {
-  let input_stride = int_ceil(width * size_of::<[u8; 4]>(), ROW_ALIGNMENT);
-  if input.len() < input_stride * height {
+fn decode_pix_map24(input: &[u8], width: u16, height: u16) -> Result<SwfBitmap, DecodeError> {
+  const INPUT_PIXEL_SIZE: usize = size_of::<[u8; 4]>();
+  let input_stride = int_ceil(usize::from(width) * INPUT_PIXEL_SIZE, ROW_ALIGNMENT);
+  if input.len() < input_stride * usize::from(height) {
     return Err(DecodeError::Invalid);
   }
-  let stride: usize = width * RGBA_SIZE;
-  let mut data: Vec<u8> = Vec::with_capacity(stride * height);
+  let stride: usize = usize::from(width) * RGBA_SIZE;
+  let mut data: Vec<u8> = Vec::with_capacity(stride * usize::from(height));
   for y in 0..height {
     for x in 0..width {
-      let offset = input_stride * y + x;
+      let offset = input_stride * usize::from(y) + INPUT_PIXEL_SIZE * usize::from(x);
       // `input[offset + 0]` is reserved
       let r: u8 = input[offset + 1];
       let g: u8 = input[offset + 2];
@@ -160,7 +166,11 @@ fn decode_pix_map24(input: &[u8], width: usize, height: usize) -> Result<SwfBitm
     }
   }
   Ok(SwfBitmap {
-    meta: SwfBitmapMeta { width, height, stride },
+    meta: SwfBitmapMeta {
+      width: width.into(),
+      height: height.into(),
+      stride,
+    },
     data,
   })
 }
